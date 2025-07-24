@@ -1,7 +1,10 @@
 import { useState } from "react";
 import Navigation from "@/components/Navigation";
-import Dashboard from "@/components/Dashboard"; 
+import Dashboard from "@/components/Dashboard";
 import InventoryTable from "@/components/InventoryTable";
+import VendorsPage from "@/components/VendorsPage";
+import ReportsPage from "@/components/ReportsPage";
+import SettingsPage from "@/components/SettingsPage";
 
 const Index = () => {
   const [activeView, setActiveView] = useState('dashboard');
@@ -13,32 +16,11 @@ const Index = () => {
       case 'inventory':
         return <InventoryTable />;
       case 'vendors':
-        return (
-          <div className="min-h-screen bg-background p-8">
-            <div className="container mx-auto">
-              <h1 className="text-2xl font-bold mb-4">Vendor Management</h1>
-              <p className="text-muted-foreground">Vendor management interface coming soon...</p>
-            </div>
-          </div>
-        );
+        return <VendorsPage />;
       case 'reports':
-        return (
-          <div className="min-h-screen bg-background p-8">
-            <div className="container mx-auto">
-              <h1 className="text-2xl font-bold mb-4">Reports & Analytics</h1>
-              <p className="text-muted-foreground">Advanced reporting interface coming soon...</p>
-            </div>
-          </div>
-        );
+        return <ReportsPage />;
       case 'settings':
-        return (
-          <div className="min-h-screen bg-background p-8">
-            <div className="container mx-auto">
-              <h1 className="text-2xl font-bold mb-4">System Settings</h1>
-              <p className="text-muted-foreground">Settings interface coming soon...</p>
-            </div>
-          </div>
-        );
+        return <SettingsPage />;
       default:
         return <Dashboard />;
     }

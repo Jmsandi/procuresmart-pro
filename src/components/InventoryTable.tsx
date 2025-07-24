@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,91 +21,51 @@ import {
   CheckCircle,
   Package
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const InventoryTable = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock inventory data
-  const inventoryItems = [
-    {
-      id: "INV-001",
-      name: "Laptop Dell XPS 13",
-      category: "Electronics",
-      sku: "DELL-XPS13-001",
-      currentStock: 25,
-      minimumStock: 20,
-      unitPrice: 899.99,
-      totalValue: 22499.75,
-      supplier: "TechCorp Ltd",
-      lastUpdated: "2024-01-15",
-      status: "in-stock"
-    },
-    {
-      id: "INV-002", 
-      name: "USB-C Cables (Pack of 10)",
-      category: "Electronics",
-      sku: "USB-C-10PK-001",
-      currentStock: 45,
-      minimumStock: 50,
-      unitPrice: 29.99,
-      totalValue: 1349.55,
-      supplier: "Cable Co",
-      lastUpdated: "2024-01-14",
-      status: "low-stock"
-    },
-    {
-      id: "INV-003",
-      name: "A4 Paper Reams",
-      category: "Office Supplies",
-      sku: "PAPER-A4-500",
-      currentStock: 78,
-      minimumStock: 100,
-      unitPrice: 4.99,
-      totalValue: 389.22,
-      supplier: "Office Plus",
-      lastUpdated: "2024-01-13",
-      status: "low-stock"
-    },
-    {
-      id: "INV-004",
-      name: "Ergonomic Office Chairs",
-      category: "Furniture",
-      sku: "CHAIR-ERG-001",
-      currentStock: 15,
-      minimumStock: 10,
-      unitPrice: 299.99,
-      totalValue: 4499.85,
-      supplier: "Furniture Pro",
-      lastUpdated: "2024-01-12",
-      status: "in-stock"
-    },
-    {
-      id: "INV-005",
-      name: "Laser Toner Cartridges",
-      category: "Electronics",
-      sku: "TONER-HP-001",
-      currentStock: 5,
-      minimumStock: 15,
-      unitPrice: 89.99,
-      totalValue: 449.95,
-      supplier: "Print Solutions",
-      lastUpdated: "2024-01-11",
-      status: "critical"
-    },
-    {
-      id: "INV-006",
-      name: "Wireless Mouse",
-      category: "Electronics", 
-      sku: "MOUSE-WL-001",
-      currentStock: 120,
-      minimumStock: 50,
-      unitPrice: 24.99,
-      totalValue: 2998.80,
-      supplier: "TechCorp Ltd",
-      lastUpdated: "2024-01-10",
-      status: "in-stock"
+  useEffect(() => {
+    fetchInventoryItems();
+  }, []);
+
+  const fetchInventoryItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select(`
+          *,
+          categories (name),
+          suppliers (name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedItems = data?.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.categories?.name || 'Unknown',
+        sku: item.sku,
+        currentStock: item.current_stock,
+        minimumStock: item.minimum_stock,
+        unitPrice: item.unit_price / 100, // Convert from cents to leones
+        totalValue: (item.current_stock * item.unit_price) / 100,
+        supplier: item.suppliers?.name || 'Unknown',
+        lastUpdated: new Date(item.updated_at).toLocaleDateString(),
+        status: item.status
+      })) || [];
+
+      setInventoryItems(formattedItems);
+    } catch (error) {
+      console.error('Error fetching inventory items:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const filteredItems = inventoryItems.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -199,19 +159,27 @@ const InventoryTable = () => {
 
           {/* Inventory Table */}
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/20">
-                  <TableHead className="font-semibold">Item Details</TableHead>
-                  <TableHead className="font-semibold">Category</TableHead>
-                  <TableHead className="font-semibold">Stock Levels</TableHead>
-                  <TableHead className="font-semibold">Pricing</TableHead>
-                  <TableHead className="font-semibold">Supplier</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <Package className="h-8 w-8 mx-auto text-muted-foreground animate-pulse" />
+                  <p className="text-muted-foreground mt-2">Loading inventory...</p>
+                </div>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20">
+                    <TableHead className="font-semibold">Item Details</TableHead>
+                    <TableHead className="font-semibold">Category</TableHead>
+                    <TableHead className="font-semibold">Stock Levels</TableHead>
+                    <TableHead className="font-semibold">Pricing (Leones)</TableHead>
+                    <TableHead className="font-semibold">Supplier</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                 {filteredItems.map((item) => (
                   <TableRow key={item.id} className="hover:bg-muted/20 transition-colors">
                     <TableCell>
@@ -256,10 +224,10 @@ const InventoryTable = () => {
                     <TableCell>
                       <div className="space-y-1">
                         <p className="font-medium text-foreground">
-                          ${item.unitPrice.toFixed(2)}
+                          Le {item.unitPrice.toFixed(2)}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Total: ${item.totalValue.toFixed(2)}
+                          Total: Le {item.totalValue.toFixed(2)}
                         </p>
                       </div>
                     </TableCell>
@@ -289,8 +257,9 @@ const InventoryTable = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            )}
           </div>
         </Card>
       </div>
