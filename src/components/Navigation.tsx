@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  LayoutDashboard, 
-  Package, 
-  Users, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Package,
+  Users,
+  FileText,
   Settings,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  ShoppingCart,
+  TrendingUp,
+  LogOut,
+  User
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavigationProps {
   activeView: string;
@@ -18,14 +23,21 @@ interface NavigationProps {
 
 const Navigation = ({ activeView, onViewChange }: NavigationProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { profile, signOut, hasPermission } = useAuth();
 
   const navigationItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'inventory', label: 'Inventory', icon: Package },
-    { id: 'vendors', label: 'Vendors', icon: Users },
-    { id: 'reports', label: 'Reports', icon: FileText },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'procurement_officer', 'auditor'] },
+    { id: 'inventory', label: 'Inventory', icon: Package, roles: ['admin', 'procurement_officer'] },
+    { id: 'vendors', label: 'Vendors', icon: Users, roles: ['admin', 'procurement_officer'] },
+    { id: 'purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, roles: ['admin', 'procurement_officer'] },
+    { id: 'stock-movements', label: 'Stock Movements', icon: TrendingUp, roles: ['admin', 'procurement_officer'] },
+    { id: 'reports', label: 'Reports', icon: FileText, roles: ['admin', 'procurement_officer', 'auditor'] },
+    { id: 'settings', label: 'Settings', icon: Settings, roles: ['admin'] },
   ];
+
+  const visibleNavigationItems = navigationItems.filter(item =>
+    hasPermission(item.roles as any)
+  );
 
   return (
     <>
@@ -69,7 +81,7 @@ const Navigation = ({ activeView, onViewChange }: NavigationProps) => {
 
         {/* Navigation Items */}
         <nav className="p-4 space-y-2">
-          {navigationItems.map((item) => {
+          {visibleNavigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
             
@@ -96,15 +108,29 @@ const Navigation = ({ activeView, onViewChange }: NavigationProps) => {
 
         {/* User Section */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-muted/20">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
-            <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-primary">JD</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+              <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {profile?.full_name || 'User'}
+                </p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {profile?.role?.replace('_', ' ') || 'User'}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">John Doe</p>
-              <p className="text-xs text-muted-foreground">Procurement Manager</p>
-            </div>
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={signOut}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
           </div>
         </div>
       </aside>

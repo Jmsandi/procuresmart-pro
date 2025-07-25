@@ -2,18 +2,20 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Package, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Package,
+  DollarSign,
+  TrendingUp,
   AlertTriangle,
   ShoppingCart,
   Users,
   FileText,
-  Plus
+  Plus,
+  Bell
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
+import { useStockMonitoring } from "@/hooks/useStockMonitoring";
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -25,6 +27,7 @@ const Dashboard = () => {
     categoryData: []
   });
   const [loading, setLoading] = useState(true);
+  const { stockAlerts, isMonitoring } = useStockMonitoring();
 
   useEffect(() => {
     fetchDashboardData();
@@ -115,7 +118,25 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Smart Procurement Dashboard</h1>
-              <p className="text-muted-foreground">Real-time inventory and procurement insights</p>
+              <div className="flex items-center gap-2">
+                <p className="text-muted-foreground">Real-time inventory and procurement insights</p>
+                {isMonitoring && (
+                  <div className="flex items-center gap-1 text-xs text-success">
+                    <div className="h-2 w-2 bg-success rounded-full animate-pulse"></div>
+                    Live monitoring active
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {stockAlerts.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-warning/10 border border-warning/20 rounded-lg">
+                  <Bell className="h-4 w-4 text-warning" />
+                  <span className="text-sm font-medium text-warning">
+                    {stockAlerts.length} stock alerts
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

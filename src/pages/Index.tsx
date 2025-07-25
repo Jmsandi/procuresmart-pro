@@ -3,24 +3,53 @@ import Navigation from "@/components/Navigation";
 import Dashboard from "@/components/Dashboard";
 import InventoryTable from "@/components/InventoryTable";
 import VendorsPage from "@/components/VendorsPage";
+import PurchaseOrdersPage from "@/components/PurchaseOrdersPage";
+import StockMovementsPage from "@/components/StockMovementsPage";
 import ReportsPage from "@/components/ReportsPage";
 import SettingsPage from "@/components/SettingsPage";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const [activeView, setActiveView] = useState('dashboard');
+  const { hasPermission } = useAuth();
 
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
         return <Dashboard />;
       case 'inventory':
-        return <InventoryTable />;
+        return (
+          <ProtectedRoute requiredRole={['admin', 'procurement_officer']}>
+            <InventoryTable />
+          </ProtectedRoute>
+        );
       case 'vendors':
-        return <VendorsPage />;
+        return (
+          <ProtectedRoute requiredRole={['admin', 'procurement_officer']}>
+            <VendorsPage />
+          </ProtectedRoute>
+        );
+      case 'purchase-orders':
+        return (
+          <ProtectedRoute requiredRole={['admin', 'procurement_officer']}>
+            <PurchaseOrdersPage />
+          </ProtectedRoute>
+        );
+      case 'stock-movements':
+        return (
+          <ProtectedRoute requiredRole={['admin', 'procurement_officer']}>
+            <StockMovementsPage />
+          </ProtectedRoute>
+        );
       case 'reports':
-        return <ReportsPage />;
+        return <ReportsPage />; // All roles can view reports
       case 'settings':
-        return <SettingsPage />;
+        return (
+          <ProtectedRoute requiredRole="admin">
+            <SettingsPage />
+          </ProtectedRoute>
+        );
       default:
         return <Dashboard />;
     }

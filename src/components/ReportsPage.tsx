@@ -2,17 +2,28 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  FileText, 
-  Download, 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  FileText,
+  Download,
   Calendar,
   TrendingUp,
   Package,
   DollarSign,
-  ShoppingCart
+  ShoppingCart,
+  FileSpreadsheet
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import {
+  exportToPDF,
+  exportToExcel,
+  exportInventoryReport,
+  exportPurchaseOrdersReport,
+  exportLowStockReport,
+  exportStockMovementsReport
+} from "@/lib/exportUtils";
 
 const ReportsPage = () => {
   const [reportData, setReportData] = useState({
@@ -22,6 +33,8 @@ const ReportsPage = () => {
     topCategories: []
   });
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchReportData();
@@ -93,34 +106,74 @@ const ReportsPage = () => {
     }
   };
 
+  const handleExport = async (reportType: string, format: 'pdf' | 'excel') => {
+    setExporting(true);
+    try {
+      let exportData;
+
+      switch (reportType) {
+        case 'inventory':
+          exportData = await exportInventoryReport(supabase);
+          break;
+        case 'purchase-orders':
+          exportData = await exportPurchaseOrdersReport(supabase);
+          break;
+        case 'low-stock':
+          exportData = await exportLowStockReport(supabase);
+          break;
+        case 'stock-movements':
+          exportData = await exportStockMovementsReport(supabase);
+          break;
+        default:
+          throw new Error('Unknown report type');
+      }
+
+      if (format === 'pdf') {
+        exportToPDF(exportData);
+      } else {
+        exportToExcel(exportData);
+      }
+
+      toast({
+        title: "Export Successful",
+        description: `${reportType} report exported as ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const reports = [
     {
+      id: "inventory",
       title: "Inventory Valuation Report",
       description: "Complete inventory value breakdown by category",
-      type: "PDF",
-      generated: "2024-01-15",
-      status: "ready"
+      icon: Package
     },
     {
+      id: "purchase-orders",
       title: "Purchase Order Summary",
       description: "Monthly procurement and vendor analysis",
-      type: "Excel",
-      generated: "2024-01-14",
-      status: "ready"
+      icon: ShoppingCart
     },
     {
+      id: "stock-movements",
       title: "Stock Movement Report",
       description: "Detailed stock in/out transactions",
-      type: "PDF",
-      generated: "2024-01-13",
-      status: "generating"
+      icon: TrendingUp
     },
     {
+      id: "low-stock",
       title: "Low Stock Alert Report",
       description: "Items requiring immediate attention",
-      type: "PDF",
-      generated: "2024-01-12",
-      status: "ready"
+      icon: Package
     }
   ];
 
@@ -270,43 +323,42 @@ const ReportsPage = () => {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {reports.map((report, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-muted/20 rounded-lg border">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <FileText className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{report.title}</p>
-                        <p className="text-sm text-muted-foreground">{report.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <Badge variant="outline" className="mb-1">
-                          {report.type}
-                        </Badge>
-                        <p className="text-xs text-muted-foreground">
-                          Generated: {report.generated}
-                        </p>
+                {reports.map((report) => {
+                  const IconComponent = report.icon;
+                  return (
+                    <div key={report.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-lg border">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <IconComponent className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">{report.title}</p>
+                          <p className="text-sm text-muted-foreground">{report.description}</p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge 
-                          variant={report.status === 'ready' ? 'default' : 'secondary'}
-                          className={report.status === 'ready' ? 'bg-success/20 text-success border-success/20' : ''}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleExport(report.id, 'pdf')}
+                          disabled={exporting}
                         >
-                          {report.status}
-                        </Badge>
-                        {report.status === 'ready' && (
-                          <Button variant="outline" size="sm">
-                            <Download className="h-3 w-3 mr-1" />
-                            Download
-                          </Button>
-                        )}
+                          <FileText className="h-3 w-3 mr-1" />
+                          PDF
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleExport(report.id, 'excel')}
+                          disabled={exporting}
+                        >
+                          <FileSpreadsheet className="h-3 w-3 mr-1" />
+                          Excel
+                        </Button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </Card>
